@@ -10,7 +10,8 @@ python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --ms_files *.calibrated --re
 
 RA, DEC coordinate of the centre of the injection (in deg) 
 
-flux total injected flux  
+flux total injected flux
+
 *.calibrated all the measurement sets 
 
 re e-folding radius in kpc
