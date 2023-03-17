@@ -6,7 +6,9 @@ Requirments: python3 and WSClean
 
 
 MUVIT was developed to produce images of mock radio halos, but can be tailored to many other radio sources. The current release of the code:
+
 a. includes 2D-exponential and 2D-gaussian profiles to model the surface brightness of the mock emission. 
+
 b. was tested on LOFAR, GMRT/uGMRT, VLA/JVLA data
 
 
