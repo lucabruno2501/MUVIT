@@ -298,7 +298,7 @@ if do_0inj == True:
 wsclean_niter1 = substitute_clean_parameter(wsclean_command, '-name', root_img+'_mod'+str(flux*1000)+'mJy', 1)
 wsclean_niter1 = substitute_clean_parameter(wsclean_niter1, '-niter', str(1), 1)
 wsclean_niter1 = add_logfile(wsclean_niter1, '>wsclean_niter1.log')
-
+os.system(wsclean_niter1)
 
 if nchan == False:
     models = glob.glob(root_img+'_mod'+str(flux*1000)+'mJy-model.fits')
