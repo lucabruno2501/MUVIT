@@ -99,25 +99,7 @@ kpc_to_arcsec=1./arcsec_to_kpc
 re_as = re*arcsec_to_kpc
 
 
-
-
-"""
-WSCLEAN INPUTS
-"""
-
-"""
-def remove_space(text):
-    output_text = ""
-    for character in text:
-        if character != " ":
-            output_text += character
-    return output_text
-"""
-
-
-
- 
- 
+  
 def find_data_column(text, word_to_search):
     text_array = text.split()
     try:
@@ -240,7 +222,6 @@ def flatten(filename, channel=0, freqaxis=0):
         raise RadioError('Cannot make map from this')
     if naxis==2:
         pass
-        #return f[0].header,f[0].data
 
     w = pywcs(f[0].header)
     wn = pywcs(naxis=2)
