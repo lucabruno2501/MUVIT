@@ -16,7 +16,7 @@ Future releases will include further models.
 Questions, suggestions and issues can be reported by sending an email to: luca.bruno4@unibo.it  
 
 
-### Citation 
+## Citation 
 
 If you make use of MUVIT, please cite the following paper: "The Planck clusters in the LOFAR sky. II. LoTSS-DR2: Recovering diffuse extended emission with LOFAR", Bruno et al. 2023, A&A, 672, A41 
 
@@ -24,7 +24,7 @@ https://www.aanda.org/articles/aa/full_html/2023/04/aa44552-22/aa44552-22.html
 
 
 
-### Requirements
+## Requirements
 
 MUVIT is written in python3 and makes use of WSClean (https://gitlab.com/aroffringa/wsclean) for imaging and Fourier-transforms. The main required python packages are:
 
@@ -35,17 +35,17 @@ MUVIT is written in python3 and makes use of WSClean (https://gitlab.com/aroffri
 5. CASACORE (https://github.com/casacore/casacore)
 
 
-### Usage
+## Usage
 
 STEP0: before running the code, it is necessary to image your dataset in WSClean. For this step, do not apply uv-tapering and specify the parameter "-no-update-model-required". Your imaging parameters will be then automatically exploited by MUVIT to image the mock visibilities.   
 
 WARNING: MUVIT updates the MODEL_DATA column with the mock+real visibilities. At each running, the MODEL_DATA column is overwritten!
 
-USAGE EXAMPLE: \textbf{python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --z 0.233 --re 200 --input_fits imagefromstep0.fits --ms_files *.ms}
+USAGE EXAMPLE: python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --z 0.233 --re 200 --input_fits imagefromstep0.fits --ms_files *.ms
 
 
 
-## REQUIRED ARGUMENTS:
+### REQUIRED ARGUMENTS:
 
   --input_fits INPUT_FITS  Image from STEP0
                         
@@ -62,7 +62,7 @@ USAGE EXAMPLE: \textbf{python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --z 0
   --ms_files MS_FILES [MS_FILES ...]   Measurement sets
 
 
-## OPTIONAL ARGUMENTS:
+### OPTIONAL ARGUMENTS:
 
   -h, --help            show this help message and exit
   
