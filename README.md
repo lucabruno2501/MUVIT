@@ -37,30 +37,34 @@ MUVIT is written in python3 and makes use of WSClean (https://gitlab.com/aroffri
 
 ### Usage
 
-0. STEP0: before running the code, image your dataset in WSClean. For this step, do not apply uv-tapering and specify the parameter "-no-update-model-required". Your imaging parameters will be then automatically exploited by MUVIT to image the mock visibilities.   
+STEP0: before running the code, it is necessary to image your dataset in WSClean. For this step, do not apply uv-tapering and specify the parameter "-no-update-model-required". Your imaging parameters will be then automatically exploited by MUVIT to image the mock visibilities.   
 
-
-
+WARNING: MUVIT updates the MODEL_DATA column with the mock+real visibilities. At each running, the MODEL_DATA column is overwritten!
 
 
 usage: MUVIT.py [-h] [--name NAME] --input_fits INPUT_FITS --RA RA --DEC DEC --z Z --re RE --flux FLUX [--model MODEL] --ms_files MS_FILES [MS_FILES ...] [--taper_kpc TAPER_KPC]
                 [--taper_arcsec TAPER_ARCSEC] [--spix SPIX] [--do_0inj DO_0INJ]
 
-MUVIT performs injection of mock visibilities in uv-datasets
+example: python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --z 0.233 --re 200 --input_fits imagefromstep0.fits --ms_files *.ms
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --name NAME           Object name; default TARGET
+
+
+required arguments:
   --input_fits INPUT_FITS
-                        Full resolution image from a previous wsclean run
+                        Image from STEP0
   --RA RA               Right Ascension (deg)
   --DEC DEC             Declination (deg)
   --z Z                 Redshift
   --re RE               e-folding radius (kpc)
   --flux FLUX           Total injected flux density at the reference frequency (mJy)
-  --model MODEL         exponential (EXP) or Gaussian (GAUSS); default EXP
-  --ms_files MS_FILES [MS_FILES ...]
+  --ms_files MS_FILES [MS_FILES ...]  
                         Measurement sets
+
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --model MODEL         exponential (EXP) or Gaussian (GAUSS); default EXP
+  --name NAME           Object name; default TARGET
   --taper_kpc TAPER_KPC
                         Tapering (in kpc)
   --taper_arcsec TAPER_ARCSEC
@@ -70,24 +74,14 @@ optional arguments:
 
 
 
+### Notes on arguments
+
+1. By default, MUVIT will produce an image of the mock emission with the same imaging parameters of STEP0. Tapering of the baselines can be activated with --taper_kpc or --taper_arcsec to enhance faint extended emission
+2. --do_0inj True allows to produce a (tapered) image of the data without performing any injections. 
+3. For --model GAUSS, the e-folding radius is assumed to be the standard deviation of the Gaussian profile (see Bruno et al. 2023 for details). 
+4. --spix allows to change the default spectral index of the mock source (for multi-frequency models)
 
 
 
-
-
-Example of how to run the code (see details with python3 MUVIT.py --help):
-python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --z 0.233 --re 200 --input_fits TEST-image.fits --ms_files *.calibrated
-
-Required parameters are:
-1. coordinates (in deg) of the centre of the injection
-2. total injected flux density (in mJy)
-3. redshift
-4. e-folding radius (exponential model) or standard deviation (Gaussian model) (in kpc)
-5. image created at STEP 0
-6. measurment set(s) 
-
-By default, MUVIT will produce an image of the mock emission with the same imaging parameters of STEP 0. Tapering of the baselines can be done (see help). 
-
-WARNING: MUVIT updates the MODEL_DATA column with the mock+real visibilities. At each running, the MODEL_DATA column is overwritten!
 
 
