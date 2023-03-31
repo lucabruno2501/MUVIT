@@ -1,4 +1,6 @@
 # MUVIT
+
+#INTRODUCTION
 Mock UV-data Injector Tool
 
 MUVIT is a python code that allows to inject mock visibilities into a real dataset of a radio observation.
