@@ -1,6 +1,6 @@
 # MUVIT (Mock UV-data Injector Tool)
 
-## Introduction
+## INTRODUCTION
 
 
 MUVIT is a python code that allows to inject mock visibilities into a real interferometric radio observation. MUVIT was developed to generate mock radio halos, but can be tailored to simulate point sources and many other extended radio sources. 
@@ -16,7 +16,7 @@ Future releases will include further models.
 Questions, suggestions and issues can be reported by sending an email to: luca.bruno4@unibo.it  
 
 
-## Citation 
+## CITATION 
 
 If you make use of MUVIT, please cite the following paper: "The Planck clusters in the LOFAR sky. II. LoTSS-DR2: Recovering diffuse extended emission with LOFAR", Bruno et al. 2023, A&A, 672, A41 
 
@@ -24,7 +24,7 @@ https://www.aanda.org/articles/aa/full_html/2023/04/aa44552-22/aa44552-22.html
 
 
 
-## Requirements
+## REQUIREMENTS
 
 MUVIT is written in python3 and makes use of WSClean (https://gitlab.com/aroffringa/wsclean) for imaging and Fourier-transforms. The main required python packages are:
 
@@ -35,7 +35,7 @@ MUVIT is written in python3 and makes use of WSClean (https://gitlab.com/aroffri
 5. CASACORE (https://github.com/casacore/casacore)
 
 
-## Usage
+## USAGE
 
 STEP0: before running the code, it is necessary to image your dataset in WSClean. For this step, do not apply uv-tapering and specify the parameter "-no-update-model-required". Your imaging parameters will be then automatically exploited by MUVIT to image the mock visibilities.   
 
@@ -45,7 +45,7 @@ USAGE EXAMPLE: python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --z 0.233 --r
 
 
 
-### REQUIRED ARGUMENTS:
+## Required arguments:
 
   --input_fits INPUT_FITS  Image from STEP0
                         
@@ -62,7 +62,7 @@ USAGE EXAMPLE: python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --z 0.233 --r
   --ms_files MS_FILES [MS_FILES ...]   Measurement sets
 
 
-### OPTIONAL ARGUMENTS:
+### Optional arguments:
 
   -h, --help            show this help message and exit
   
@@ -82,7 +82,7 @@ USAGE EXAMPLE: python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --z 0.233 --r
 
 
 
-### Notes on arguments
+## Notes on arguments
 
 1. By default, MUVIT will produce an image of the mock emission with the same imaging parameters of STEP0. Tapering of the baselines can be activated with --taper_kpc or --taper_arcsec to enhance faint extended emission
 2. --do_0inj True allows to produce a (tapered) image of the data without performing any injections. 
