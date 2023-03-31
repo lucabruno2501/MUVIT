@@ -41,17 +41,13 @@ STEP0: before running the code, it is necessary to image your dataset in WSClean
 
 WARNING: MUVIT updates the MODEL_DATA column with the mock+real visibilities. At each running, the MODEL_DATA column is overwritten!
 
-
-usage: MUVIT.py [-h] [--name NAME] --input_fits INPUT_FITS --RA RA --DEC DEC --z Z --re RE --flux FLUX [--model MODEL] --ms_files MS_FILES [MS_FILES ...] [--taper_kpc TAPER_KPC]
-                [--taper_arcsec TAPER_ARCSEC] [--spix SPIX] [--do_0inj DO_0INJ]
-
-example: python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --z 0.233 --re 200 --input_fits imagefromstep0.fits --ms_files *.ms
+USAGE EXAMPLE: \textbf{python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --z 0.233 --re 200 --input_fits imagefromstep0.fits --ms_files *.ms}
 
 
 
-required arguments:
-  --input_fits INPUT_FITS
-                        Image from STEP0
+## REQUIRED ARGUMENTS:
+
+  --input_fits INPUT_FITS  Image from STEP0
                         
   --RA RA               Right Ascension (deg)
   
@@ -63,11 +59,11 @@ required arguments:
   
   --flux FLUX           Total injected flux density at the reference frequency (mJy)
   
-  --ms_files MS_FILES [MS_FILES ...]  
-                        Measurement sets
+  --ms_files MS_FILES [MS_FILES ...]   Measurement sets
 
 
-optional arguments:
+## OPTIONAL ARGUMENTS:
+
   -h, --help            show this help message and exit
   
   --model MODEL         exponential (EXP) or Gaussian (GAUSS); default EXP
