@@ -52,24 +52,36 @@ example: python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --z 0.233 --re 200 
 required arguments:
   --input_fits INPUT_FITS
                         Image from STEP0
+                        
   --RA RA               Right Ascension (deg)
+  
   --DEC DEC             Declination (deg)
+  
   --z Z                 Redshift
+  
   --re RE               e-folding radius (kpc)
+  
   --flux FLUX           Total injected flux density at the reference frequency (mJy)
+  
   --ms_files MS_FILES [MS_FILES ...]  
                         Measurement sets
 
 
 optional arguments:
   -h, --help            show this help message and exit
+  
   --model MODEL         exponential (EXP) or Gaussian (GAUSS); default EXP
+  
   --name NAME           Object name; default TARGET
+  
   --taper_kpc TAPER_KPC
                         Tapering (in kpc)
+                        
   --taper_arcsec TAPER_ARCSEC
                         Tapering (in arcsec)
+                        
   --spix SPIX           Spectral index; default -1.3
+  
   --do_0inj DO_0INJ     Do only imaging without injection and exit; default False
 
 
