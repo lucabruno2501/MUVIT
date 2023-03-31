@@ -45,7 +45,7 @@ USAGE EXAMPLE: python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --z 0.233 --r
 
 
 
-## Required arguments:
+### Required arguments:
 
   --input_fits INPUT_FITS  Image from STEP0
                         
@@ -82,7 +82,7 @@ USAGE EXAMPLE: python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --z 0.233 --r
 
 
 
-## Notes on arguments
+### Notes on arguments
 
 1. By default, MUVIT will produce an image of the mock emission with the same imaging parameters of STEP0. Tapering of the baselines can be activated with --taper_kpc or --taper_arcsec to enhance faint extended emission
 2. --do_0inj True allows to produce a (tapered) image of the data without performing any injections. 
