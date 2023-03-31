@@ -11,6 +11,7 @@ The current release of the code:
 1. includes 2D-exponential and 2D-gaussian profiles to model the surface brightness of the mock emission. 
 2. was tested on LOFAR, GMRT/uGMRT, VLA/JVLA, VLBA data
 
+Future releases will include further models.
 
 Questions, suggestions and issues can be reported by sending an email to: luca.bruno4@unibo.it  
 
@@ -19,10 +20,11 @@ Questions, suggestions and issues can be reported by sending an email to: luca.b
 
 If you make use of MUVIT, please cite the following paper: "The Planck clusters in the LOFAR sky. II. LoTSS-DR2: Recovering diffuse extended emission with LOFAR", Bruno et al. 2023, A&A, 672, A41 
 
-https://ui.adsabs.harvard.edu/search/fq=%7B!type%3Daqp%20v%3D%24fq_database%7D&fq_database=(database%3Aastronomy)&q=%20%20author%3A%22%5Ebruno%22%20year%3A2023&sort=date%20desc%2C%20bibcode%20desc&p_=0
+https://www.aanda.org/articles/aa/full_html/2023/04/aa44552-22/aa44552-22.html
 
 
-### Requirments
+
+### Requirements
 
 MUVIT is written in python3 and makes use of WSClean (https://gitlab.com/aroffringa/wsclean) for imaging and Fourier-transforms. The main required python packages are:
 
@@ -35,7 +37,42 @@ MUVIT is written in python3 and makes use of WSClean (https://gitlab.com/aroffri
 
 ### Usage
 
-Before running the code (STEP 0): image your dataset in WSClean at FULL RESOLUTION (no uvtaper in this step) (please specify "-no-update-model-required"). The imaging parameters will be automatically exploited by MUVIT.  
+0. STEP0: before running the code, image your dataset in WSClean. For this step, do not apply uv-tapering and specify the parameter "-no-update-model-required". Your imaging parameters will be then automatically exploited by MUVIT to image the mock visibilities.   
+
+
+
+
+
+usage: MUVIT.py [-h] [--name NAME] --input_fits INPUT_FITS --RA RA --DEC DEC --z Z --re RE --flux FLUX [--model MODEL] --ms_files MS_FILES [MS_FILES ...] [--taper_kpc TAPER_KPC]
+                [--taper_arcsec TAPER_ARCSEC] [--spix SPIX] [--do_0inj DO_0INJ]
+
+MUVIT performs injection of mock visibilities in uv-datasets
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --name NAME           Object name; default TARGET
+  --input_fits INPUT_FITS
+                        Full resolution image from a previous wsclean run
+  --RA RA               Right Ascension (deg)
+  --DEC DEC             Declination (deg)
+  --z Z                 Redshift
+  --re RE               e-folding radius (kpc)
+  --flux FLUX           Total injected flux density at the reference frequency (mJy)
+  --model MODEL         exponential (EXP) or Gaussian (GAUSS); default EXP
+  --ms_files MS_FILES [MS_FILES ...]
+                        Measurement sets
+  --taper_kpc TAPER_KPC
+                        Tapering (in kpc)
+  --taper_arcsec TAPER_ARCSEC
+                        Tapering (in arcsec)
+  --spix SPIX           Spectral index; default -1.3
+  --do_0inj DO_0INJ     Do only imaging without injection and exit; default False
+
+
+
+
+
+
 
 
 Example of how to run the code (see details with python3 MUVIT.py --help):
