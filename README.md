@@ -93,6 +93,9 @@ python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --z 0.233 --re 200 --input_f
 4. --spix allows to change the default spectral index of the mock source (for multi-frequency models)
 
 
+### Notes for mock radio halos with LOFAR HBA
+If you want to obtain upper limits on radio halos (exponential profile) with LOFAR HBA, it is useful to run LOFAR_HBA_findUL.py first. Based on the empirical relation in Bruno et al. 2023, an estimate of the upper limit flux density can be derived from the resolution and noise of your image. The output of the script is the total flux density (i.e. integrated up to infinity).   
 
+ 
 
 
