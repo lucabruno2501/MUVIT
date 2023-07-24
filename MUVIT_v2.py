@@ -165,7 +165,7 @@ pixscale = round(float(abs((header_fits['CDELT1']*3600))),2)
 nchan = find_clean_parameter(wsclean_command, '-channels-out')
 name_fullres0 = find_clean_parameter(wsclean_command, '-name')
 reorder = find_clean_parameter(wsclean_command, '-reorder')
-
+pol = find_clean_parameter(wsclean_command, '-pol')
     
 def substitute_clean_parameter(text, word_to_search, word_new, narguments):
     text_array = text.split()
@@ -318,15 +318,15 @@ if do_0inj == True:
 ##############################################################
 
 
-wsclean_niter1 = substitute_clean_parameter(wsclean_command, '-name', root_img+'_mod'+str(flux*1000)+'mJy', 1)
+wsclean_niter1 = substitute_clean_parameter(wsclean_command, '-name', root_img+'_mod'+input_model+str(flux*1000)+'mJy', 1)
 wsclean_niter1 = substitute_clean_parameter(wsclean_niter1, '-niter', str(1), 1)
 wsclean_niter1 = add_logfile(wsclean_niter1, '>wsclean_niter1.log')
 os.system(wsclean_niter1)
 
 if nchan == False:
-    models = glob.glob(root_img+'_mod'+str(flux*1000)+'mJy-model.fits')
+    models = glob.glob(root_img+'_mod'+input_model+str(flux*1000)+'mJy-model.fits')
 else:
-    models = glob.glob(root_img+'_mod'+str(flux*1000)+'mJy-0*-model.fits')
+    models = glob.glob(root_img+'_mod'+input_model+str(flux*1000)+'mJy-0*-model.fits')
 
 
 ##############################################################
@@ -403,10 +403,17 @@ print('Predicting mock visibilities')
 print('********************************************')
 print()
 
+wsclean_predict = 'wsclean -predict -name inject_'+root_img+'_mod'+input_model+str(flux*1000)+'mJy '
+
 if nchan != False:
-    os.system('wsclean -predict -name inject_'+root_img+'_mod'+str(flux*1000)+'mJy -channels-out ' +str(nchan)+' '+ms_files_wsclean+' >wsclean_predict.log')
-if nchan == False:
-    os.system('wsclean -predict -name inject_'+root_img+'_mod'+str(flux*1000)+'mJy -reorder '+ms_files_wsclean+' >wsclean_predict.log')
+   wsclean_predict += '-channels-out ' + str(nchan) + ' '
+
+if pol != False:
+   wsclean_predict += '-pol ' + pol + ' '
+
+wsclean_predict += ms_files_wsclean
+
+os.system(wsclean_predict + ' > wsclean_predict.log')
 
 
 ##############################################################
@@ -432,9 +439,9 @@ for ms_file in ms_files:
 
 
 if taper_to_use == None:
-    wsclean_final = substitute_clean_parameter(wsclean_command, '-name', root_img+'_MOCK_'+str(flux*1000)+'mJy', 1)
+    wsclean_final = substitute_clean_parameter(wsclean_command, '-name', root_img+'_MOCK_'+input_model+str(flux*1000)+'mJy', 1)
 if taper_to_use != None:
-    wsclean_final = substitute_clean_parameter(wsclean_command, '-name', root_img+'_MOCK_'+str(flux*1000)+'mJy_T'+str(taper_to_use)+'arcsec', 1)
+    wsclean_final = substitute_clean_parameter(wsclean_command, '-name', root_img+'_MOCK_'+input_model+str(flux*1000)+'mJy_T'+str(taper_to_use)+'arcsec', 1)
     wsclean_final = substitute_clean_parameter(wsclean_final, '-size', str(imsize_tapered), 1)
     wsclean_final = substitute_clean_parameter(wsclean_final, '-size', str(imsize_tapered), 2)
     wsclean_final = substitute_clean_parameter(wsclean_final, '-scale', str(pixscale_tapered)+'arcsec', 1)
@@ -461,9 +468,9 @@ os.system(wsclean_final)
 ##############################################################
 
 
-os.system('rm -rf '+str(root_img)+'_mod'+str(flux*1000)+'*000*') #niter 1 channel images
-os.system('rm -rf '+str(root_img)+'_mod'+str(flux*1000)+'*MFS*') #niter 1 MFS images
-os.system('rm -rf inject_'+str(root_img)+'_mod'+str(flux*1000)+'*000*') #injected model images
-os.system('rm -rf '+str(root_img)+'_MOCK_'+str(flux*1000)+'*T*000*') #mock image channel maps
-os.system('rm -rf '+str(root_img)+'_MOCK_'+str(flux*1000)+'*T*psf.fits') #mock image psf map
-os.system('rm -rf '+str(root_img)+'_MOCK_'+str(flux*1000)+'*T*dirty.fits') #mock image dirty map
+os.system('rm -rf '+str(root_img)+'_mod'+input_model+str(flux*1000)+'*000*') #niter 1 channel images
+os.system('rm -rf '+str(root_img)+'_mod'+input_model+str(flux*1000)+'*MFS*') #niter 1 MFS images
+os.system('rm -rf inject_'+str(root_img)+'_mod'+input_model+str(flux*1000)+'*model*') #injected model images
+os.system('rm -rf '+str(root_img)+'_MOCK_'+input_model+str(flux*1000)+'*T*000*') #mock image channel maps
+os.system('rm -rf '+str(root_img)+'_MOCK_'+input_model+str(flux*1000)+'*T*psf.fits') #mock image psf map
+os.system('rm -rf '+str(root_img)+'_MOCK_'+input_model+str(flux*1000)+'*T*dirty.fits') #mock image dirty map
