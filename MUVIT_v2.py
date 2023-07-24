@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-#python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --ms_files *.calibrated --re 200 --z 0.233 --input_fits TEST-image.fits
+#python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --ms_files *.calibrated --r1 200 --z 0.233 --input_fits TEST-image.fits
 
 #Mock UV-data Injector Tool (MUVIT)
 
@@ -39,7 +39,9 @@ parser.add_argument('--DEC', type=float, help = 'Declination (deg)', required=Tr
 
 parser.add_argument('--z', type=float, help = 'Redshift', required=True)
 
-parser.add_argument('--re', type=float, help = 'e-folding radius (kpc)', required=True)
+parser.add_argument('--r1', type=float, help = 'First e-folding radius (kpc)', required=True)
+parser.add_argument('--r2', type=float, help = 'Second e-folding radius (kpc); default r2=r1', default=None, required=False)
+parser.add_argument('--ang', type=float, help = 'Rotation angle of the ellipse (deg) following ds9 convention (r1=x, r2=y axis); default 0', default=0., required=False)
 parser.add_argument('--flux', type=float, help = 'Total injected flux density at the reference frequency (mJy)', required=True)
 
 parser.add_argument('--model', type=str, help = 'exponential (EXP) or Gaussian (GAUSS); default EXP', default = 'EXP', required=False)
@@ -65,7 +67,14 @@ INPUTS
 input_image = args.input_fits
 RA = args.RA
 DEC = args.DEC
-re = args.re
+r1 = args.r1
+
+if args.r2 == None:
+    r2 = args.r1
+else:
+    r2 = args.r2
+
+ang = args.ang
 flux = 1.e-3 * args.flux
 ms_files = args.ms_files
 ms_files_wsclean = ' '.join(ms_files)
@@ -95,8 +104,9 @@ arcsec_to_kpc = cosmo.arcsec_per_kpc_proper(z).value
 kpc_to_arcsec=1./arcsec_to_kpc
 
 
-#e-folding radius in arcsec
-re_as = re*arcsec_to_kpc
+#e-folding radii in arcsec
+r1_as = r1*arcsec_to_kpc
+r2_as = r2*arcsec_to_kpc
 
 
   
@@ -346,13 +356,15 @@ X,Y = meshgrid(x, x)
 #   MODEL WITH EXPONENTIAL FUNCTION
 ##############################################################
 
-def exponential_2D(flux, spidx, freq, re_as, center_ra, center_dec, x, y):
-    re_px = re_as/pixscale
+def exponential_2D(flux, spidx, freq, r1_as, r2_as, ang, center_ra, center_dec, x, y):
+    r1_px = r1_as/pixscale
+    r2_px = r2_as/pixscale
     flux_freq = flux*(freq/ref_freq)**spidx
-    I_0 = flux_freq/(2.*np.pi*re_as**2) #Jy/arcsec^2
-    r = np.sqrt((x-center_ra)**2+(y-center_dec)**2)
-    exponential = I_0 * np.exp(- r/re_px) * pixscale**2 #Jy/pixel
-    
+    I_0 = flux_freq/(2.*np.pi*r1_as*r2_as) #Jy/arcsec^2
+    xx  = (x-center_ra)*np.cos(np.deg2rad(ang)) + (y-center_dec)*np.sin(np.deg2rad(ang))
+    yy  = -(x-center_ra)*np.sin(np.deg2rad(ang)) + (y-center_dec)*np.cos(np.deg2rad(ang))
+    G   = (xx/r1_px)**2.+(yy/r2_px)**2. 
+    exponential = I_0 * np.exp(- G**0.5) * pixscale**2 #Jy/pixel
 
     return exponential
 
@@ -361,12 +373,15 @@ def exponential_2D(flux, spidx, freq, re_as, center_ra, center_dec, x, y):
 #   MODEL WITH GAUSSIAN FUNCTION (sigma = re)
 ##############################################################
 
-def gauss_2D(flux, spidx, freq, re_as, center_ra, center_dec, x, y):
-    re_px = re_as/pixscale
+def gauss_2D(flux, spidx, freq, r1_as, r2_as, ang, center_ra, center_dec, x, y):
+    r1_px = r1_as/pixscale
+    r2_px = r2_as/pixscale
     flux_freq = flux*(freq/ref_freq)**spidx
-    I_0 = flux_freq/(2.*np.pi*re_as**2) #Jy/arcsec^2
-    r=np.sqrt((x-center_ra)**2+(y-center_dec)**2)
-    gaussian = I_0 * np.exp(- 0.5*(r/re_px)**2) * pixscale**2
+    I_0 = flux_freq/(2.*np.pi*r1_as*r2_as) #Jy/arcsec^2
+    xx  = (x-center_ra)*np.cos(np.deg2rad(ang)) + (y-center_dec)*np.sin(np.deg2rad(ang))
+    yy  = -(x-center_ra)*np.sin(np.deg2rad(ang)) + (y-center_dec)*np.cos(np.deg2rad(ang))
+    G   = (xx/r1_px)**2.+(yy/r2_px)**2. 
+    gaussian = I_0 * np.exp(- 0.5 * G) * pixscale**2 #Jy/pixel
 
     return gaussian
 
@@ -384,15 +399,15 @@ for model in models:
     hdr = fits.getheader(model)
     freq = hdr['CRVAL3']
     if input_model == 'EXP':
-        mock_halo = exponential_2D(flux, spidx, freq, re_as, center_ra_px, center_dec_px, X, Y)
+        mock_halo = exponential_2D(flux, spidx, freq, r1_as, r2_as, ang, center_ra_px, center_dec_px, X, Y)
     elif input_model == 'GAUSS':
-        mock_halo = gauss_2D(flux, spidx, freq, re_as, center_ra_px, center_dec_px, X, Y)
+        mock_halo = gauss_2D(flux, spidx, freq, r1_as, r2_as, ang, center_ra_px, center_dec_px, X, Y)
     model_update = 'inject_'+model
     os.system('cp '+model+' '+model_update)
 
     fits.update(model_update, mock_halo, hdr)
     
-
+sys.exit()
 
 ##############################################################
 #   FOURIER TRANSFORM: obtain mock visibilities
