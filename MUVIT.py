@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-#python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --ms_files *.calibrated --re 200 --z 0.233 --input_fits TEST-image.fits
+#python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --ms_files *.calibrated --r1 200 --z 0.233 --input_fits TEST-image.fits
 
 #Mock UV-data Injector Tool (MUVIT)
 
@@ -25,7 +25,7 @@ cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 ARGPARSE
 """
 
-parser = argparse.ArgumentParser(description = 'Perform injection of mock visibilities in uv-dataset')
+parser = argparse.ArgumentParser(description = 'MUVIT performs injection of mock visibilities in uv-datasets')
 
 
 
@@ -39,10 +39,14 @@ parser.add_argument('--DEC', type=float, help = 'Declination (deg)', required=Tr
 
 parser.add_argument('--z', type=float, help = 'Redshift', required=True)
 
-parser.add_argument('--re', type=float, help = 'e-folding radius (kpc)', required=True)
+parser.add_argument('--r1', type=float, help = 'First e-folding radius (kpc)', required=True)
+parser.add_argument('--r2', type=float, help = 'Second e-folding radius (kpc); default r2=r1', default=None, required=False)
+parser.add_argument('--ang', type=float, help = 'Rotation angle of the ellipse (deg) following ds9 convention (r1=x, r2=y axis); default 0', default=0., required=False)
+parser.add_argument('--Lcyl', type=float, help = 'Length of the cylinder (kpc); required for EXPCYL and GAUSSCYL models', default=None, required=False)
+
 parser.add_argument('--flux', type=float, help = 'Total injected flux density at the reference frequency (mJy)', required=True)
 
-parser.add_argument('--model', type=str, help = 'exponential (EXP) or Gaussian (GAUSS); default EXP', default = 'EXP', required=False)
+parser.add_argument('--model', type=str, help = 'exponential (EXP), Gaussian (GAUSS), exponential cylinder (EXPCYL), Gaussian cylinder (GAUSSCYL); default EXP', default = 'EXP', required=False)
 
 parser.add_argument('--ms_files', help = 'Measurement sets', nargs='+', required=True)
 
@@ -50,9 +54,7 @@ parser.add_argument('--taper_kpc', type=float, help = 'Tapering (in kpc)', requi
 parser.add_argument('--taper_arcsec', type=float, help = 'Tapering (in arcsec)', required=False)
 parser.add_argument('--spix', type=float, help = 'Spectral index; default -1.3', default = -1.3, required=False)
 parser.add_argument('--do_0inj', type=bool, help = 'Do only imaging without injection and exit; default False', default = False)
-
-
-
+parser.add_argument('--rm_temp', type=str, help = 'Y/N to remove/keep temporary files; default Y', required=False, default='Y')
 args = parser.parse_args()
 
 
@@ -61,11 +63,18 @@ args = parser.parse_args()
 INPUTS
 """
 
-#input_image = 'TEST.fits'
 input_image = args.input_fits
 RA = args.RA
 DEC = args.DEC
-re = args.re
+r1 = args.r1
+
+if args.r2 == None:
+    r2 = args.r1
+else:
+    r2 = args.r2
+
+ang = args.ang
+Lcyl = args.Lcyl
 flux = 1.e-3 * args.flux
 ms_files = args.ms_files
 ms_files_wsclean = ' '.join(ms_files)
@@ -83,7 +92,15 @@ spidx = args.spix
 do_0inj = args.do_0inj
 taper_kpc = args.taper_kpc
 taper_arcsec = args.taper_arcsec
+rm_temp = args.rm_temp
 
+
+
+
+
+if (input_model == 'EXPCYL' or input_model == 'GAUSSCYL') and (Lcyl == None):
+    print('ERROR: Lcyl not set but required for EXPCYL/GAUSSCYL!')
+    sys.exit()
 
 """
 ANGULAR/LINEAR CONVERSION
@@ -95,9 +112,11 @@ arcsec_to_kpc = cosmo.arcsec_per_kpc_proper(z).value
 kpc_to_arcsec=1./arcsec_to_kpc
 
 
-#e-folding radius in arcsec
-re_as = re*arcsec_to_kpc
-
+#e-folding radii in arcsec
+r1_as = r1*arcsec_to_kpc
+r2_as = r2*arcsec_to_kpc
+if Lcyl != None:
+    Lcyl_as = Lcyl*arcsec_to_kpc
 
   
 def find_data_column(text, word_to_search):
@@ -121,8 +140,6 @@ def find_data_column(text, word_to_search):
 data_fits = fits.open(input_image)
 header_fits = data_fits[0].header
 
-
-print(header_fits['HISTORY'])
 
 
 #wsclean history is output as array. this raises issues from spaces and need to be properly modified before converting in string
@@ -153,6 +170,8 @@ def find_clean_parameter(text, word_to_search):
         return clean_parameter
 
 
+
+
 datacolumn_0 = find_data_column(wsclean_command, '-data-column')[1]
 imsize = int(header_fits['NAXIS1'])
 ref_freq = float(header_fits['CRVAL3'])
@@ -162,8 +181,9 @@ pixscale = round(float(abs((header_fits['CDELT1']*3600))),2)
 
 nchan = find_clean_parameter(wsclean_command, '-channels-out')
 name_fullres0 = find_clean_parameter(wsclean_command, '-name')
-
-
+reorder = find_clean_parameter(wsclean_command, '-reorder')
+pol = find_clean_parameter(wsclean_command, '-pol')
+    
 def substitute_clean_parameter(text, word_to_search, word_new, narguments):
     text_array = text.split()
     for word in text_array:
@@ -182,11 +202,31 @@ def add_clean_parameter(text, clean_option, clean_parameter):
     return text
 
 
+def remove_clean_parameter(text, clean_option):
+    text = substitute_clean_parameter(text, clean_option, '', 1)
+    text_array = text.split()
+    try:
+        for word in text_array:
+            if word == clean_option:
+                text_array.remove(clean_option)
+                text = ' '.join(text_array)
+                
+        return text
+    except:
+        return text
+
+
 def add_logfile(text, logfile):
     text_array = text.split()
     text_array.append(logfile)
     text = ' '.join(text_array)
     return text
+
+
+
+wsclean_command = remove_clean_parameter(wsclean_command, '-fits-mask')
+
+
 
 """
 TAPER
@@ -194,7 +234,7 @@ TAPER
 
 taper_to_use = None
 if taper_arcsec != None and taper_kpc != None:
-    print('Error: please select only one taper parameter as input')
+    print('ERROR: select only one taper parameter as input!')
     sys.exit()
 elif taper_kpc != None:
     taper_to_use = int(taper_kpc/kpc_to_arcsec)
@@ -295,15 +335,15 @@ if do_0inj == True:
 ##############################################################
 
 
-wsclean_niter1 = substitute_clean_parameter(wsclean_command, '-name', root_img+'_mod'+str(flux*1000)+'mJy', 1)
+wsclean_niter1 = substitute_clean_parameter(wsclean_command, '-name', root_img+'_mod'+input_model+str(flux*1000)+'mJy', 1)
 wsclean_niter1 = substitute_clean_parameter(wsclean_niter1, '-niter', str(1), 1)
 wsclean_niter1 = add_logfile(wsclean_niter1, '>wsclean_niter1.log')
 os.system(wsclean_niter1)
 
 if nchan == False:
-    models = glob.glob(root_img+'_mod'+str(flux*1000)+'mJy-model.fits')
+    models = glob.glob(root_img+'_mod'+input_model+str(flux*1000)+'mJy-model.fits')
 else:
-    models = glob.glob(root_img+'_mod'+str(flux*1000)+'mJy-0*-model.fits')
+    models = glob.glob(root_img+'_mod'+input_model+str(flux*1000)+'mJy-0*-model.fits')
 
 
 ##############################################################
@@ -323,13 +363,15 @@ X,Y = meshgrid(x, x)
 #   MODEL WITH EXPONENTIAL FUNCTION
 ##############################################################
 
-def exponential_2D(flux, spidx, freq, re_as, center_ra, center_dec, x, y):
-    re_px = re_as/pixscale
+def exponential_2D(flux, spidx, freq, r1_as, r2_as, ang, center_ra, center_dec, x, y):
+    r1_px = r1_as/pixscale
+    r2_px = r2_as/pixscale
     flux_freq = flux*(freq/ref_freq)**spidx
-    I_0 = flux_freq/(2.*np.pi*re_as**2) #Jy/arcsec^2
-    r = np.sqrt((x-center_ra)**2+(y-center_dec)**2)
-    exponential = I_0 * np.exp(- r/re_px) * pixscale**2 #Jy/pixel
-    
+    I_0 = flux_freq/(2.*np.pi*r1_as*r2_as) #Jy/arcsec^2
+    xx  = (x-center_ra)*np.cos(np.deg2rad(ang)) + (y-center_dec)*np.sin(np.deg2rad(ang))
+    yy  = -(x-center_ra)*np.sin(np.deg2rad(ang)) + (y-center_dec)*np.cos(np.deg2rad(ang))
+    G   = (xx/r1_px)**2.+(yy/r2_px)**2. 
+    exponential = I_0 * np.exp(- G**0.5) * pixscale**2 #Jy/pixel
 
     return exponential
 
@@ -338,14 +380,58 @@ def exponential_2D(flux, spidx, freq, re_as, center_ra, center_dec, x, y):
 #   MODEL WITH GAUSSIAN FUNCTION (sigma = re)
 ##############################################################
 
-def gauss_2D(flux, spidx, freq, re_as, center_ra, center_dec, x, y):
-    re_px = re_as/pixscale
+def gauss_2D(flux, spidx, freq, r1_as, r2_as, ang, center_ra, center_dec, x, y):
+    r1_px = r1_as/pixscale
+    r2_px = r2_as/pixscale
     flux_freq = flux*(freq/ref_freq)**spidx
-    I_0 = flux_freq/(2.*np.pi*re_as**2) #Jy/arcsec^2
-    r=np.sqrt((x-center_ra)**2+(y-center_dec)**2)
-    gaussian = I_0 * np.exp(- 0.5*(r/re_px)**2) * pixscale**2
+    I_0 = flux_freq/(2.*np.pi*r1_as*r2_as) #Jy/arcsec^2
+    xx  = (x-center_ra)*np.cos(np.deg2rad(ang)) + (y-center_dec)*np.sin(np.deg2rad(ang))
+    yy  = -(x-center_ra)*np.sin(np.deg2rad(ang)) + (y-center_dec)*np.cos(np.deg2rad(ang))
+    G   = (xx/r1_px)**2.+(yy/r2_px)**2. 
+    gaussian = I_0 * np.exp(- 0.5 * G) * pixscale**2 #Jy/pixel
 
     return gaussian
+
+##############################################################
+#   MODEL WITH EXPONENTIAL CYLINDER FUNCTION
+##############################################################
+
+#ang is wrt the two clusters and ang=0 corresponds at +x axis (horizontal bridge)
+
+def exponential_cylinder(flux, spidx, freq, r1_as, Lcyl_as, ang, center_ra, center_dec, x, y):
+    r1_px = r1_as/pixscale
+    L_px = Lcyl_as/pixscale
+    flux_freq = flux*(freq/ref_freq)**spidx
+    I_0 = flux_freq/(2.*r1_as*Lcyl_as) #Jy/arcsec^2
+    xx =  (x-center_ra)*np.cos(np.deg2rad(ang)) + (y-center_dec)*np.sin(np.deg2rad(ang))
+    yy = -(x-center_ra)*np.sin(np.deg2rad(ang)) + (y-center_dec)*np.cos(np.deg2rad(ang))
+    G_y = (yy / r1_px) ** 2.
+    cylinder_mask = np.abs(xx) <= L_px / 2.
+    G = G_y + (1 - cylinder_mask) * np.max(G_y)
+    exponential_cyl = I_0 * np.exp(- G**0.5) * pixscale**2 #Jy/pixel
+
+    return exponential_cyl
+
+
+##############################################################
+#   MODEL WITH GAUSSIAN CYLINDER FUNCTION (sigma = re)
+##############################################################
+
+def gauss_cylinder(flux, spidx, freq, r1_as, Lcyl_as, ang, center_ra, center_dec, x, y):
+    r1_px = r1_as/pixscale
+    L_px = Lcyl_as/pixscale
+    flux_freq = flux*(freq/ref_freq)**spidx
+    I_0 = flux_freq/(2.*r1_as*Lcyl_as) #Jy/arcsec^2
+    xx =  (x-center_ra)*np.cos(np.deg2rad(ang)) + (y-center_dec)*np.sin(np.deg2rad(ang))
+    yy = -(x-center_ra)*np.sin(np.deg2rad(ang)) + (y-center_dec)*np.cos(np.deg2rad(ang))
+    G_y = (yy / r1_px) ** 2.
+    cylinder_mask = np.abs(xx) <= L_px / 2.
+    G = G_y + (1 - cylinder_mask) * np.max(G_y)
+    #gauss_cyl = I_0 * np.exp(- G**0.5) * pixscale**2 #Jy/pixel CHECK ANDREA!!!
+    gauss_cyl = I_0 * np.exp(- 0.5 * G) * pixscale**2 #Jy/pixel
+
+    return gauss_cyl
+
 
 
 ##############################################################
@@ -361,15 +447,18 @@ for model in models:
     hdr = fits.getheader(model)
     freq = hdr['CRVAL3']
     if input_model == 'EXP':
-        mock_halo = exponential_2D(flux, spidx, freq, re_as, center_ra_px, center_dec_px, X, Y)
+        mock_halo = exponential_2D(flux, spidx, freq, r1_as, r2_as, ang, center_ra_px, center_dec_px, X, Y)
     elif input_model == 'GAUSS':
-        mock_halo = gauss_2D(flux, spidx, freq, re_as, center_ra_px, center_dec_px, X, Y)
+        mock_halo = gauss_2D(flux, spidx, freq, r1_as, r2_as, ang, center_ra_px, center_dec_px, X, Y)
+    elif input_model == 'EXPCYL':
+        mock_halo = exponential_cylinder(flux, spidx, freq, r1_as, Lcyl_as, ang, center_ra_px, center_dec_px, X, Y)
+    elif input_model == 'GAUSSCYL':
+        mock_halo = gauss_cylinder(flux, spidx, freq, r1_as, Lcyl_as, ang, center_ra_px, center_dec_px, X, Y)
     model_update = 'inject_'+model
     os.system('cp '+model+' '+model_update)
 
     fits.update(model_update, mock_halo, hdr)
     
-
 
 ##############################################################
 #   FOURIER TRANSFORM: obtain mock visibilities
@@ -380,10 +469,17 @@ print('Predicting mock visibilities')
 print('********************************************')
 print()
 
+wsclean_predict = 'wsclean -predict -name inject_'+root_img+'_mod'+input_model+str(flux*1000)+'mJy '
+
 if nchan != False:
-    os.system('wsclean -predict -name inject_'+root_img+'_mod'+str(flux*1000)+'mJy -channels-out ' +str(nchan)+' '+ms_files_wsclean+' >wsclean_predict.log')
-if nchan == False:
-    os.system('wsclean -predict -name inject_'+root_img+'_mod'+str(flux*1000)+'mJy '+ms_files_wsclean+' >wsclean_predict.log')
+   wsclean_predict += '-channels-out ' + str(nchan) + ' '
+
+if pol != False:
+   wsclean_predict += '-pol ' + pol + ' '
+
+wsclean_predict += ms_files_wsclean
+
+os.system(wsclean_predict + ' > wsclean_predict.log')
 
 
 ##############################################################
@@ -409,9 +505,9 @@ for ms_file in ms_files:
 
 
 if taper_to_use == None:
-    wsclean_final = substitute_clean_parameter(wsclean_command, '-name', root_img+'_MOCK_'+str(flux*1000)+'mJy', 1)
+    wsclean_final = substitute_clean_parameter(wsclean_command, '-name', root_img+'_MOCK_'+input_model+str(flux*1000)+'mJy', 1)
 if taper_to_use != None:
-    wsclean_final = substitute_clean_parameter(wsclean_command, '-name', root_img+'_MOCK_'+str(flux*1000)+'mJy_T'+str(taper_to_use)+'arcsec', 1)
+    wsclean_final = substitute_clean_parameter(wsclean_command, '-name', root_img+'_MOCK_'+input_model+str(flux*1000)+'mJy_T'+str(taper_to_use)+'arcsec', 1)
     wsclean_final = substitute_clean_parameter(wsclean_final, '-size', str(imsize_tapered), 1)
     wsclean_final = substitute_clean_parameter(wsclean_final, '-size', str(imsize_tapered), 2)
     wsclean_final = substitute_clean_parameter(wsclean_final, '-scale', str(pixscale_tapered)+'arcsec', 1)
@@ -436,11 +532,35 @@ os.system(wsclean_final)
 ##############################################################
 #   REMOVE USELESS FILES
 ##############################################################
+print(rm_temp)
+print(type(rm_temp))
+if rm_temp == 'Y':
+    os.system('rm -rf '+str(root_img)+'_mod'+input_model+str(flux*1000)+'*000*') #niter 1 channel images
+    os.system('rm -rf '+str(root_img)+'_mod'+input_model+str(flux*1000)+'*MFS*') #niter 1 MFS images
+    os.system('rm -rf inject_'+str(root_img)+'_mod'+input_model+str(flux*1000)+'*model*') #injected model images
+    os.system('rm -rf '+str(root_img)+'_MOCK_'+input_model+str(flux*1000)+'*T*000*') #mock image channel maps
+    os.system('rm -rf '+str(root_img)+'_MOCK_'+input_model+str(flux*1000)+'*T*psf.fits') #mock image psf map
+    os.system('rm -rf '+str(root_img)+'_MOCK_'+input_model+str(flux*1000)+'*T*dirty.fits') #mock image dirty map
 
 
-os.system('rm -rf '+str(root_img)+'_mod'+str(flux*1000)+'*000*') #niter 1 channel images
-os.system('rm -rf '+str(root_img)+'_mod'+str(flux*1000)+'*MFS*') #niter 1 MFS images
-os.system('rm -rf inject_'+str(root_img)+'_mod'+str(flux*1000)+'*000*') #injected model images
-os.system('rm -rf '+str(root_img)+'_MOCK_'+str(flux*1000)+'*T*000*') #mock image channel maps
-os.system('rm -rf '+str(root_img)+'_MOCK_'+str(flux*1000)+'*T*psf.fits') #mock image psf map
-os.system('rm -rf '+str(root_img)+'_MOCK_'+str(flux*1000)+'*T*dirty.fits') #mock image dirty map
+##############################################################
+#   SUMMARY FILE
+##############################################################
+
+
+if do_0inj == False:
+    if os.path.exists('Summary.txt'):
+        os.remove('Summary.txt')
+    with open('Summary.txt', 'w') as f:
+        f.write('Object = ' + root_name + '\n')
+        f.write('Redshift = ' + str(z) + '\n')
+        f.write('RA (deg) = ' + str(RA) + '\n')
+        f.write('DEC (deg) = ' + str(DEC) + '\n')
+        f.write('Model = ' + input_model + '\n')
+        f.write('r_e/dev_std (kpc) = ' + str(r1) + ', ' + str(r2) + '\n')
+        f.write('r_e/dev_std (arcsec) = ' + str(round(r1_as,1)) + ', ' + str(round(r2_as,1)) + '\n')
+        if Lcyl != None:
+            f.write('Lcyl (kpc) = ' + str(Lcyl) + '\n')
+            f.write('Lcyl (arcsec) = ' + str(round(Lcyl_as,1)) + '\n')
+        f.write('angle (deg) = ' + str(ang) + '\n')
+    f.close()
