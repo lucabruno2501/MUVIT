@@ -43,7 +43,7 @@ WARNING: MUVIT updates the MODEL_DATA column with the mock+real visibilities. At
 USAGE EXAMPLE: 
 
 ```
-python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --z 0.233 --re 200 --input_fits imagefromstep0.fits --ms_files *.ms
+python3 MUVIT.py --RA 328.5 --DEC 17.67 --flux 50.5 --z 0.233 --r1 200 --input_fits imagefromstep0.fits --ms_files *.ms
 ```
 
 
